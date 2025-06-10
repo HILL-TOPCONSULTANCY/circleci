@@ -1,0 +1,60 @@
+version: 2.1
+
+# Define reusable commands
+commands:
+  install_dependencies:
+    description: "Install project dependencies"
+    steps:
+      - run:
+          name: Install dependencies
+          command: npm install
+
+# Define reusable jobs
+jobs:
+  build:
+    docker:
+      - image: cimg/node:16.10.0
+    steps:
+      - checkout
+      - install_dependencies
+      - run:
+          name: Run tests
+          command: npm test
+      - run:
+          name: Build project
+          command: npm run build
+      - store_artifacts:
+          path: build
+          destination: build
+
+  deploy:
+    docker:
+      - image: cimg/node:16.10.0
+    steps:
+      - checkout
+      - install_dependencies
+      - run:
+          name: Deploy to production
+          command: |
+            if [ "$CIRCLE_BRANCH" == "main" ]; then
+              npm run deploy
+            fi
+
+# Define workflows
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+                - /feature-.*/
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: main
